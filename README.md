@@ -1,4 +1,4 @@
-# 🔄 FOTA Simulator for IoT Devices
+# FOTA Simulator for IoT Devices
 
 This project simulates the complete **Firmware-Over-The-Air (FOTA)** update process for IoT devices, including:
 - Delta firmware updates using `bsdiff4`
@@ -10,7 +10,7 @@ This project simulates the complete **Firmware-Over-The-Air (FOTA)** update proc
 > ⚡️ MQTT-based update command system will be added in a future revision.
 
 
-## 📌 Why This Project?
+## Why This Project?
 
 In real-world embedded systems and IoT deployments, FOTA is essential for:
 - Updating firmware securely and efficiently
@@ -21,7 +21,7 @@ This simulator replicates all of that in Python to demonstrate core FOTA concept
 
 ---
 
-## 🧱 Project Structure
+## Project Structure
 ```
 fota-simulator/
 ├── client/ # Device simulation
@@ -42,7 +42,7 @@ fota-simulator/
 
 ---
 
-## 🧰 Requirements
+## Requirements
 
 - Python 3.7+
 - pip
@@ -54,9 +54,9 @@ pip install -r requirements.txt
 ```
 
 
-## 🚀 Step-by-Step Usage
+## Step-by-Step Usage
 
-### ✅ 1. Generate Simulated Firmware Files
+### 1. Generate Simulated Firmware Files
 ```
 # Optional script if you want to regenerate firmware binaries
 import os
@@ -69,7 +69,7 @@ generate_firmware(1)
 generate_firmware(2)
 ```
 
-### ✅ 2. Generate Delta Patch and SHA-256
+### 2. Generate Delta Patch and SHA-256
 ```
 cd server
 python generate_delta.py
@@ -78,7 +78,7 @@ This will create:
 - updates/v1_to_v2.delta
 - updates/v2.sha256
 
-### ✅ 3. Start Flask Update Server
+### 3. Start Flask Update Server
 ```
 python app.py
 ```
@@ -86,7 +86,7 @@ Flask serves firmware updates and hashes:
 - http://localhost:8000/updates/v1_to_v2.delta
 - http://localhost:8000/hash/v2.sha256
 
-### ✅ 4. Simulate Device Receiving Update
+### 4. Simulate Device Receiving Update
 Run once to apply the patch fully:
 
 ```
@@ -102,7 +102,7 @@ Patch downloaded.
 Firmware updated successfully!
 ```
 
-### ✅ 5. Simulate Power Loss Recovery (PLR)
+### 5. Simulate Power Loss Recovery (PLR)
 ```
 python client/device.py --plr
 ```
@@ -126,7 +126,7 @@ Applying patch...
 Firmware verified successfully.
 ```
 
-## 🔒 Firmware Validation
+## Firmware Validation
 After applying the patch, the device verifies the new firmware’s hash against the SHA-256 provided by the server.
 
 If valid → update is complete
