@@ -23,7 +23,7 @@ This simulator replicates all of that in Python to demonstrate core FOTA concept
 ---
 
 ## 🧱 Project Structure
-
+```
 fota-simulator/
 ├── client/ # Device simulation
 │ ├── apply_patch.py # Simple patching script
@@ -37,5 +37,5 @@ fota-simulator/
 ├── logs/ # PLR recovery logs
 ├── requirements.txt
 └── README.md
-
+```
 
