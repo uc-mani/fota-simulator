@@ -9,7 +9,6 @@ This project simulates the complete **Firmware-Over-The-Air (FOTA)** update proc
 
 > ⚡️ MQTT-based update command system will be added in a future revision.
 
----
 
 ## 📌 Why This Project?
 
