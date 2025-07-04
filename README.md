@@ -39,3 +39,101 @@ fota-simulator/
 └── README.md
 ```
 
+
+
+---
+
+## 🧰 Requirements
+
+- Python 3.7+
+- pip
+- Optional: Mosquitto (for future MQTT feature)
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+
+## 🚀 Step-by-Step Usage
+
+### ✅ 1. Generate Simulated Firmware Files
+```
+# Optional script if you want to regenerate firmware binaries
+import os
+
+def generate_firmware(version, size_kb=50):
+    with open(f"firmware/v{version}.bin", "wb") as f:
+        f.write(os.urandom(size_kb * 1024))
+
+generate_firmware(1)
+generate_firmware(2)
+```
+
+### ✅ 2. Generate Delta Patch and SHA-256
+```
+cd server
+python generate_delta.py
+```
+This will create:
+- updates/v1_to_v2.delta
+- updates/v2.sha256
+
+### ✅ 3. Start Flask Update Server
+```
+python app.py
+```
+Flask serves firmware updates and hashes:
+- http://localhost:8000/updates/v1_to_v2.delta
+- http://localhost:8000/hash/v2.sha256
+
+### ✅ 4. Simulate Device Receiving Update
+Run once to apply the patch fully:
+
+```
+cd ../
+copy firmware\v1.bin client\base_firmware.bin
+python client/apply_patch.py
+```
+
+You should get:
+
+```
+Patch downloaded.
+Firmware updated successfully!
+```
+
+### ✅ 5. Simulate Power Loss Recovery (PLR)
+```
+python client/device.py --plr
+```
+Output:
+
+```
+Fetching delta update...
+Applying patch...
+Error during patch: Simulated power loss
+Device crashed. Recovery info saved.
+```
+
+Then resume:
+```
+python client/device.py
+```
+
+You should see:
+```
+Applying patch...
+Firmware verified successfully.
+```
+
+## 🔒 Firmware Validation
+After applying the patch, the device verifies the new firmware’s hash against the SHA-256 provided by the server.
+
+If valid → update is complete
+
+If failed → rollback or retry (to be added in future)
+
+## 📜 License
+MIT License
+
