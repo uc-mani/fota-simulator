@@ -56,7 +56,7 @@ pip install -r requirements.txt
 
 ## Step-by-Step Usage
 
-### 1. Generate Simulated Firmware Files
+### 1. Generate Simulated Firmware Files (generate_firmware.py)
 ```
 # Optional script if you want to regenerate firmware binaries
 import os
@@ -69,7 +69,7 @@ generate_firmware(1)
 generate_firmware(2)
 ```
 
-### 2. Generate Delta Patch and SHA-256
+### 2. Generate Delta Patch and SHA-256 (generate_delta.py)
 ```
 cd server
 python generate_delta.py
