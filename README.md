@@ -133,6 +133,12 @@ If valid → update is complete
 
 If failed → rollback or retry (to be added in future)
 
+
+![Diagram](https://github.com/user-attachments/assets/176cf900-3a6d-42c0-ba3b-af21236c71a4)
+
+
+
+
 ## 📜 License
 MIT License
 
