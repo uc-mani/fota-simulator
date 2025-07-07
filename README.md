@@ -80,7 +80,7 @@ This will create:
 
 ### 3. Start Flask Update Server
 ```
-python app.py
+python .\server\app.py
 ```
 Flask serves firmware updates and hashes:
 - http://localhost:8000/updates/v1_to_v2.delta
