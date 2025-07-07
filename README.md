@@ -126,6 +126,27 @@ Applying patch...
 Firmware verified successfully.
 ```
 
+### 6. MQTT-Based Update Trigger
+To simulate cloud-based control:
+
+1. Run MQTT broker:
+   ```
+    mosquitto
+   ```
+2. Start device (it subscribes to device/update):
+    ```
+    python client/device.py
+    ```
+3. Send an update trigger from server:
+    ```
+    python mqtt_trigger.py
+    ```
+4. Device publishes results to device/status:
+- update_success or
+- patch_failed or
+- verify_failed or
+- download_failed
+
 ## Firmware Validation
 After applying the patch, the device verifies the new firmware’s hash against the SHA-256 provided by the server.
 
