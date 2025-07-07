@@ -4,6 +4,12 @@ import os
 import hashlib
 import argparse
 
+import paho.mqtt.client as mqtt
+
+MQTT_BROKER = "localhost"
+MQTT_TOPIC = "device/update"
+MQTT_STATUS_TOPIC = "device/status"
+
 # Defines
 BASE_FW = "client/base_firmware.bin"
 PATCH_FILE = "client/patch.delta"
@@ -88,14 +94,52 @@ def verify_firmware():
         print("Error during verification:", e)
         return False
 
-if __name__ == "__main__":
-    # Resume logic: check recovery log
-    if not os.path.exists(PATCH_FILE) or os.path.exists(RECOVERY_LOG):
-        if not download_patch():
-            exit(1)
+# if __name__ == "__main__":
+#     # Resume logic: check recovery log
+#     if not os.path.exists(PATCH_FILE) or os.path.exists(RECOVERY_LOG):
+#         if not download_patch():
+#             exit(1)
+#
+#     if apply_patch_with_recovery():
+#         if not verify_firmware():
+#             print("Update corrupted — retry or rollback.")
+#     else:
+#         print("Device crashed. Recovery info saved.")
 
-    if apply_patch_with_recovery():
-        if not verify_firmware():
-            print("Update corrupted — retry or rollback.")
-    else:
-        print("Device crashed. Recovery info saved.")
+
+def on_message(client, userdata, msg):
+    payload = msg.payload.decode().strip().lower()
+    print(f"[MQTT] Received command: {payload}")
+
+    if payload == "start":
+        print("[MQTT] Starting firmware update process.")
+
+        # Begin update logic
+        if not os.path.exists(PATCH_FILE) or os.path.exists(RECOVERY_LOG):
+            if not download_patch():
+                client.publish(MQTT_STATUS_TOPIC, "download_failed")
+                return
+
+        if apply_patch_with_recovery():
+            if verify_firmware():
+                print("Firmware verified successfully.")
+                client.publish(MQTT_STATUS_TOPIC, "Update_success")
+            else:
+                print("Update corrupted — retry or rollback.")
+                client.publish(MQTT_STATUS_TOPIC, "verify_failed")
+
+        else:
+            print("Device crashed. Recovery info saved.")
+            client.publish(MQTT_STATUS_TOPIC, "patch_failed")
+
+def start_mqtt_listener():
+    global client
+    client = mqtt.Client()
+    client.on_message = on_message
+    client.connect(MQTT_BROKER)
+    client.subscribe(MQTT_TOPIC)
+    print(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
+    client.loop_forever()
+
+if __name__ == "__main__":
+    start_mqtt_listener()
