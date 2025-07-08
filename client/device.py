@@ -9,32 +9,31 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 
 
-# Defines
-BASE_FW = "client/base_firmware.bin"
-BACKUP_FW = "client/firmware_backup.bin"
-PATCH_FILE = "client/patch.delta"
-NEW_FW = "client/firmware.bin"
-RECOVERY_LOG = "logs/recovery.log"
-HASH_URL = "http://localhost:8000/hash/v2.sha256"
-PATCH_URL = "http://localhost:8000/updates/v1_to_v2.delta"
+# === File Paths and URLs ===
+BASE_FW = "client/base_firmware.bin"  # Original firmware
+BACKUP_FW = "client/firmware_backup.bin"  # Backup in case of rollback
+PATCH_FILE = "client/patch.delta"  # Delta patch to apply
+NEW_FW = "client/firmware.bin"  # Resulting firmware after patch
+RECOVERY_LOG = "logs/recovery.log"  # Used to resume after crash
+HASH_URL = "http://localhost:8000/hash/v2.sha256"  # Expected hash from server
+PATCH_URL = "http://localhost:8000/updates/v1_to_v2.delta"  # Delta patch URL
+SIG_URL = "http://localhost:8000/sig/v2.sig"  # Signature of the new firmware
+PUBKEY_PATH = "keys/public_key.pem"  # Public key for signature verification
 
-# MQTT
+# === MQTT Configuration ===
 MQTT_BROKER = "localhost"
-MQTT_TOPIC = "device/update"
-MQTT_STATUS_TOPIC = "device/status"
-
-# Signing
-SIG_URL = "http://localhost:8000/sig/v2.sig"
-PUBKEY_PATH = "keys/public_key.pem"
+MQTT_TOPIC = "device/update"  # Topic to receive update triggers
+MQTT_STATUS_TOPIC = "device/status"  # Topic to publish update status
 
 
-# Argument parsing
+# === Command Line Argument for Power Loss Simulation ===
 # run on CLI like: python client/device.py --plr
 parser = argparse.ArgumentParser()
 parser.add_argument("--plr", action="store_true", help="Simulate power loss during patch")
 args = parser.parse_args()
 SIMULATE_PLR = args.plr
 
+# === Download the patch file from server ===
 def download_patch():
     print("Fetching delta update...")
     r = requests.get(PATCH_URL)
@@ -47,29 +46,24 @@ def download_patch():
         return False
     return True
 
+# === Apply delta patch to base firmware ===
 def apply_patch_with_recovery():
     print("Applying patch...")
     try:
-        # Backup current firmware before patching
         if os.path.exists(BASE_FW):
-            shutil.copy(BASE_FW, BACKUP_FW)
+            shutil.copy(BASE_FW, BACKUP_FW)  # Backup base firmware
             print("Backup created.")
 
         with open(BASE_FW, "rb") as f_old, open(PATCH_FILE, "rb") as f_patch:
             old_data = f_old.read()
             patch_data = f_patch.read()
 
-        # Simulate power loss in middle (optional testing)
-        # Raise an exception to simulate crash
-        # raise Exception("Simulated power loss")
         if SIMULATE_PLR:
-            raise Exception("Simulated power loss")
+            raise Exception("Simulated power loss")  # Crash simulation
 
-        new_data = bsdiff4.patch(old_data, patch_data)
-
+        new_data = bsdiff4.patch(old_data, patch_data) #diff old and patch data, to get new data(v2)
         with open(NEW_FW, "wb") as f_new:
-            f_new.write(new_data)
-
+            f_new.write(new_data) # writes new data to firmware.bin
 
 ############# ----  FW ROLLBACK SIMULATION  ---- ##############
         # Simulate corruption
@@ -77,10 +71,8 @@ def apply_patch_with_recovery():
             #f.write(b"corruption")
 ############# ----  FW ROLLBACK SIMULATION  ---- ##############
 
-
-        # Clear recovery info if successful
         if os.path.exists(RECOVERY_LOG):
-            os.remove(RECOVERY_LOG)
+            os.remove(RECOVERY_LOG)  # Clear recovery log if successful
 
         print("Patch applied successfully.")
         return True
@@ -91,6 +83,7 @@ def apply_patch_with_recovery():
             log.write("Patch failed\n")
         return False
 
+# === Verify firmware using SHA256 hash ===
 def verify_firmware():
     print("Verifying firmware integrity...")
     try:
@@ -116,6 +109,7 @@ def verify_firmware():
         print("Error during verification:", e)
         return False
 
+# === Verify firmware signature using RSA ===
 def verify_signature():
     try:
         print("Verifying firmware signature...")
@@ -154,19 +148,7 @@ def verify_signature():
         print("Signature verification failed!", e)
         return False
 
-# if __name__ == "__main__":
-#     # Resume logic: check recovery log
-#     if not os.path.exists(PATCH_FILE) or os.path.exists(RECOVERY_LOG):
-#         if not download_patch():
-#             exit(1)
-#
-#     if apply_patch_with_recovery():
-#         if not verify_firmware():
-#             print("Update corrupted — retry or rollback.")
-#     else:
-#         print("Device crashed. Recovery info saved.")
-
-
+# === Handle MQTT message callback ===
 def on_message(client, userdata, msg):
     payload = msg.payload.decode().strip().lower()
     print(f"[MQTT] Received command: {payload}")
@@ -210,6 +192,7 @@ def on_message(client, userdata, msg):
             print("Device crashed. Recovery info saved.")
             client.publish(MQTT_STATUS_TOPIC, "patch_failed")
 
+# === Start MQTT listener ===
 def start_mqtt_listener():
     global client
     client = mqtt.Client()
@@ -218,8 +201,6 @@ def start_mqtt_listener():
     client.subscribe(MQTT_TOPIC)
     print(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
     client.loop_forever()
-
-
 
 if __name__ == "__main__":
     start_mqtt_listener()
