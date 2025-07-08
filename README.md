@@ -132,6 +132,14 @@ To regenerate signature:
 sign_firmware("firmware/v2.bin", "keys/private_key.pem", "updates/v2.sig")
 ```
 
+## Flow:
+```
+mqtt_trigger.py → sends "start"
+device.py → downloads patch → applies patch
+         → verifies SHA256 → verifies signature
+         → if OK → success
+         → if fail → rollback + status publish
+```
 
 ![Diagram](https://github.com/user-attachments/assets/176cf900-3a6d-42c0-ba3b-af21236c71a4)
 
