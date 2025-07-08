@@ -21,27 +21,6 @@ This simulator replicates all of that in Python to demonstrate core FOTA concept
 
 ---
 
-## Project Structure
-```
-fota-simulator/
-├── client/ # Device simulation
-│ ├── apply_patch.py # Simple patching script
-│ ├── device.py # FOTA client with PLR + hash check
-│ └── base_firmware.bin # Original firmware on the device
-├── server/
-│ ├── app.py # Flask server for patch + hash files
-│ └── generate_delta.py # Create delta and hash
-├── firmware/ # Raw firmware files (v1 = old, v2 = updated)
-├── updates/ # Generated patch and hash files
-├── logs/ # PLR recovery logs
-├── requirements.txt
-└── README.md
-```
-
-
-
----
-
 ## Requirements
 
 - Python 3.7+
@@ -80,7 +59,7 @@ This will create:
 
 ### 3. Start Flask Update Server
 ```
-python .\server\app.py
+python app.py
 ```
 Flask serves firmware updates and hashes:
 - http://localhost:8000/updates/v1_to_v2.delta
@@ -126,33 +105,31 @@ Applying patch...
 Firmware verified successfully.
 ```
 
-### 6. MQTT-Based Update Trigger
-To simulate cloud-based control:
-
-1. Run MQTT broker:
-   ```
-    mosquitto
-   ```
-2. Start device (it subscribes to device/update):
-    ```
-    python client/device.py
-    ```
-3. Send an update trigger from server:
-    ```
-    python mqtt_trigger.py
-    ```
-4. Device publishes results to device/status:
-- update_success or
-- patch_failed or
-- verify_failed or
-- download_failed
-
 ## Firmware Validation
 After applying the patch, the device verifies the new firmware’s hash against the SHA-256 provided by the server.
 
 If valid → update is complete
 
 If failed → rollback or retry (to be added in future)
+
+
+### Firmware Signature Verification
+
+This simulator signs firmware updates using an RSA private key and verifies them on the device using the public key. This simulates secure production OTA environments.
+
+- Firmware (`v2.bin`) is signed using a private key
+- Signature is stored as `updates/v2.sig`
+- Device downloads this and verifies it before trusting the update
+
+To generate new keys:
+```
+python scripts/generate_keys.py
+```
+
+To regenerate signature:
+```
+sign_firmware("firmware/v2.bin", "keys/private_key.pem", "updates/v2.sig")
+```
 
 
 ![Diagram](https://github.com/user-attachments/assets/176cf900-3a6d-42c0-ba3b-af21236c71a4)

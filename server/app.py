@@ -13,5 +13,10 @@ def serve_updates(filename):
 def serve_hash(filename):
     return send_from_directory("../updates", filename)
 
+@app.route("/sig/<path:filename>")
+def serve_sig(filename):
+    return send_from_directory("../updates", filename)
+
+
 if __name__ == "__main__":
     app.run(port=8000)

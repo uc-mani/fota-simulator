@@ -1,22 +1,32 @@
+import shutil
 import requests
 import bsdiff4
 import os
 import hashlib
 import argparse
-
 import paho.mqtt.client as mqtt
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import serialization, hashes
 
-MQTT_BROKER = "localhost"
-MQTT_TOPIC = "device/update"
-MQTT_STATUS_TOPIC = "device/status"
 
 # Defines
 BASE_FW = "client/base_firmware.bin"
+BACKUP_FW = "client/firmware_backup.bin"
 PATCH_FILE = "client/patch.delta"
 NEW_FW = "client/firmware.bin"
 RECOVERY_LOG = "logs/recovery.log"
 HASH_URL = "http://localhost:8000/hash/v2.sha256"
 PATCH_URL = "http://localhost:8000/updates/v1_to_v2.delta"
+
+# MQTT
+MQTT_BROKER = "localhost"
+MQTT_TOPIC = "device/update"
+MQTT_STATUS_TOPIC = "device/status"
+
+# Signing
+SIG_URL = "http://localhost:8000/sig/v2.sig"
+PUBKEY_PATH = "keys/public_key.pem"
+
 
 # Argument parsing
 # run on CLI like: python client/device.py --plr
@@ -24,7 +34,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--plr", action="store_true", help="Simulate power loss during patch")
 args = parser.parse_args()
 SIMULATE_PLR = args.plr
-
 
 def download_patch():
     print("Fetching delta update...")
@@ -41,6 +50,11 @@ def download_patch():
 def apply_patch_with_recovery():
     print("Applying patch...")
     try:
+        # Backup current firmware before patching
+        if os.path.exists(BASE_FW):
+            shutil.copy(BASE_FW, BACKUP_FW)
+            print("Backup created.")
+
         with open(BASE_FW, "rb") as f_old, open(PATCH_FILE, "rb") as f_patch:
             old_data = f_old.read()
             patch_data = f_patch.read()
@@ -55,6 +69,14 @@ def apply_patch_with_recovery():
 
         with open(NEW_FW, "wb") as f_new:
             f_new.write(new_data)
+
+
+############# ----  FW ROLLBACK SIMULATION  ---- ##############
+        # Simulate corruption
+        #with open(NEW_FW, "ab") as f:
+            #f.write(b"corruption")
+############# ----  FW ROLLBACK SIMULATION  ---- ##############
+
 
         # Clear recovery info if successful
         if os.path.exists(RECOVERY_LOG):
@@ -94,6 +116,44 @@ def verify_firmware():
         print("Error during verification:", e)
         return False
 
+def verify_signature():
+    try:
+        print("Verifying firmware signature...")
+
+        # load firmware
+        with open(NEW_FW, "rb") as f:
+            firmware_data = f.read()
+
+        # Load public key
+        with open(PUBKEY_PATH, "rb") as f:
+            public_key = serialization.load_pem_public_key(f.read())
+
+        # Download Signature
+        r = requests.get(SIG_URL)
+        if r.status_code != 200:
+            print("Failed to download firmware signature.")
+            return False
+
+        signature = r.content
+
+        # Verify signature
+        public_key.verify(
+            signature,
+            firmware_data,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+
+        print("Signature Verified Successfully.")
+        return True
+
+    except Exception as e:
+        print("Signature verification failed!", e)
+        return False
+
 # if __name__ == "__main__":
 #     # Resume logic: check recovery log
 #     if not os.path.exists(PATCH_FILE) or os.path.exists(RECOVERY_LOG):
@@ -122,11 +182,29 @@ def on_message(client, userdata, msg):
 
         if apply_patch_with_recovery():
             if verify_firmware():
-                print("Firmware verified successfully.")
-                client.publish(MQTT_STATUS_TOPIC, "Update_success")
+                if verify_signature():
+                    print("Firmware verified successfully.")
+                    client.publish(MQTT_STATUS_TOPIC, "Update_success")
+                else:
+                    print("Signature invalid. Performing rollback.")
+                    client.publish(MQTT_STATUS_TOPIC, "signature_invalid")
+                    if os.path.exists(BACKUP_FW):
+                        shutil.copy(BACKUP_FW, NEW_FW)
+                        print("Rollback complete. Previous firmware restored.")
+                        client.publish(MQTT_STATUS_TOPIC, "rollback_performed")
+                    else:
+                        print("Rollback failed: backup not found.")
+                        client.publish(MQTT_STATUS_TOPIC, "rollback_failed")
+
             else:
-                print("Update corrupted — retry or rollback.")
-                client.publish(MQTT_STATUS_TOPIC, "verify_failed")
+                print("Update corrupted — performing rollback.")
+                if os.path.exists(BACKUP_FW):
+                    shutil.copy(BACKUP_FW, NEW_FW)
+                    print("Rollback complete. Previous firmware restored.")
+                    client.publish(MQTT_STATUS_TOPIC, "rollback_performed")
+                else:
+                    print("Rollback failed: backup not found.")
+                    client.publish(MQTT_STATUS_TOPIC, "rollback_failed")
 
         else:
             print("Device crashed. Recovery info saved.")
@@ -140,6 +218,8 @@ def start_mqtt_listener():
     client.subscribe(MQTT_TOPIC)
     print(f"Subscribed to MQTT topic: {MQTT_TOPIC}")
     client.loop_forever()
+
+
 
 if __name__ == "__main__":
     start_mqtt_listener()
