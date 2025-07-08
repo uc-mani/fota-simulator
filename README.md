@@ -7,8 +7,6 @@ This project simulates the complete **Firmware-Over-The-Air (FOTA)** update proc
 - Flask-based firmware update server
 - Optional simulated crash using `--plr` flag
 
-> ⚡️ MQTT-based update command system will be added in a future revision.
-
 
 ## Why This Project?
 
@@ -25,7 +23,7 @@ This simulator replicates all of that in Python to demonstrate core FOTA concept
 
 - Python 3.7+
 - pip
-- Optional: Mosquitto (for future MQTT feature)
+Mosquitto (for MQTT feature)
 
 Install dependencies:
 ```bash
@@ -110,7 +108,7 @@ After applying the patch, the device verifies the new firmware’s hash against 
 
 If valid → update is complete
 
-If failed → rollback or retry (to be added in future)
+If failed → rollback or retry
 
 
 ### Firmware Signature Verification
