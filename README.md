@@ -6,6 +6,9 @@ This project simulates the complete **Firmware-Over-The-Air (FOTA)** update proc
 - Power Loss Recovery (PLR) to resume interrupted updates
 - Flask-based firmware update server
 - Optional simulated crash using `--plr` flag
+- MQTT-based update command system
+- Rollback mechanism
+- Firmware Signing using RSA
 
 
 ## Why This Project?
