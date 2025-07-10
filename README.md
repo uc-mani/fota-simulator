@@ -106,7 +106,7 @@ Applying patch...
 Firmware verified successfully.
 ```
 
-## Firmware Validation
+### 6. Firmware Validation
 After applying the patch, the device verifies the new firmware’s hash against the SHA-256 provided by the server.
 
 If valid → update is complete
@@ -114,7 +114,7 @@ If valid → update is complete
 If failed → rollback or retry
 
 
-### Firmware Signature Verification
+### 7. Firmware Signature Verification
 
 This simulator signs firmware updates using an RSA private key and verifies them on the device using the public key. This simulates secure production OTA environments.
 
